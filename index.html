@@ -10,8 +10,8 @@
 
 <body>
     <div id="weather-container">
-        <h2>
-            weather app
+        <h2 class="main-heading">
+            City Temperature Insights
         </h2>
         <input type="text" id="city" placeholder="enter city">
         <button onclick="getWeather()">search</button>
@@ -20,37 +20,99 @@
         <div id="weather-info"></div>
         <div id="hourly-forecast"></div>
     </div>
-    <script>function getWeather() {
-            // const apiKey='8371aa9ae04a288573b8cb6526f57194';
-            const city = document.getElementById('city').value;
-            console.log(city);
+        <script>function applyWeatherTheme(weatherMain) {
+            const body = document.body;
+            body.classList.remove('theme-sunny', 'theme-rain', 'theme-snow', 'theme-storm');
 
-            const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=8371aa9ae04a288573b8cb6526f57194`;
+            const condition = (weatherMain || '').toLowerCase();
 
-            async function getWeather() {
+            if (condition.includes('thunderstorm') || condition.includes('storm') || condition.includes('squall')) {
+                body.classList.add('theme-storm');
+                return;
+            }
+            if (condition.includes('rain') || condition.includes('drizzle')) {
+                body.classList.add('theme-rain');
+                return;
+            }
+            if (condition.includes('snow')) {
+                body.classList.add('theme-snow');
+                return;
+            }
+            if (condition.includes('clear')) {
+                body.classList.add('theme-sunny');
+            }
+        }
+
+        function applyTemperatureBackground(tempC, cityName) {
+            const body = document.body;
+            body.classList.remove('temp-freezing', 'temp-cool', 'temp-warm', 'temp-hot');
+
+            const normalizedCity = (cityName || '').trim().toLowerCase();
+            if (normalizedCity === 'manali') {
+                body.classList.add('temp-freezing');
+                return;
+            }
+
+            if (tempC <= 5) {
+                body.classList.add('temp-freezing');
+                return;
+            }
+            if (tempC <= 18) {
+                body.classList.add('temp-cool');
+                return;
+            }
+            if (tempC <= 30) {
+                body.classList.add('temp-warm');
+                return;
+            }
+            body.classList.add('temp-hot');
+        }
+
+        function getWeather() {
+            const apiKey = '8371aa9ae04a288573b8cb6526f57194';
+            const city = document.getElementById('city').value.trim();
+            if (!city) {
+                alert('please enter a city');
+                return;
+            }
+
+            const encodedCity = encodeURIComponent(city);
+            const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodedCity}&limit=5&appid=${apiKey}`;
+
+            async function loadWeather() {
                 try {
-                    const res = await fetch(currentWeatherUrl);
+                    const geoRes = await fetch(geoUrl);
+                    const geoData = await geoRes.json();
+
+                    if (!geoRes.ok || !Array.isArray(geoData) || geoData.length === 0) {
+                        alert('city not found');
+                        return;
+                    }
+
+                    const location = geoData[0];
+                    const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&units=metric&appid=${apiKey}`;
+                    const res = await fetch(weatherUrl);
                     const data = await res.json();
-                    console.log(data);
-                    const tempf=data.main.temp;
-                    const speed=data.wind.speed;
-                    const temp=(tempf-273);
+
+                    if (!res.ok || String(data.cod) === '404' || !data.main || typeof data.main.temp !== 'number') {
+                        const message = data && data.message ? data.message : 'city not found';
+                        alert(message);
+                        return;
+                    }
+
+                    const temp = data.main.temp;
                     const tempDivInfo = document.getElementById('temp-div');
-                    tempDivInfo.innerHTML=temp+" celcius";
+                    tempDivInfo.innerHTML = Math.round(temp) + " celcius";
+                    applyWeatherTheme(data.weather && data.weather[0] ? data.weather[0].main : '');
+                    applyTemperatureBackground(temp, city);
                 } catch (error) {
                     console.error('Error fetching weather data:', error);
                 }
             }
-            getWeather();
-            if (!city) {
-                alert('please enter a city');
-                console.log("hi");
-                return;
 
-            }
+            loadWeather();
         }
     </script>
-
 </body>
 
 </html>
