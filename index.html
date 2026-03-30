@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <link rel="stylesheet" href="./style2.css">
     <title>Document</title>
 </head>
@@ -76,6 +77,8 @@
                 return;
             }
 
+            console.log('Searching weather for city:', city);
+
             const encodedCity = encodeURIComponent(city);
             const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodedCity}&limit=5&appid=${apiKey}`;
 
@@ -83,6 +86,7 @@
                 try {
                     const geoRes = await fetch(geoUrl);
                     const geoData = await geoRes.json();
+                    console.log('Geo API response:', geoData);
 
                     if (!geoRes.ok || !Array.isArray(geoData) || geoData.length === 0) {
                         alert('city not found');
@@ -93,6 +97,7 @@
                     const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&units=metric&appid=${apiKey}`;
                     const res = await fetch(weatherUrl);
                     const data = await res.json();
+                    console.log('Weather API response:', data);
 
                     if (!res.ok || String(data.cod) === '404' || !data.main || typeof data.main.temp !== 'number') {
                         const message = data && data.message ? data.message : 'city not found';
@@ -101,8 +106,26 @@
                     }
 
                     const temp = data.main.temp;
+                    const humidity = data.main.humidity;
+                    const windSpeed = data.wind && typeof data.wind.speed === 'number' ? data.wind.speed : null;
+                    const condition = data.weather && data.weather[0] ? data.weather[0].description : 'N/A';
+                    console.log('Parsed weather data:', {
+                        city: data.name,
+                        tempC: temp,
+                        condition: data.weather && data.weather[0] ? data.weather[0].main : 'unknown',
+                        humidity,
+                        windSpeed
+                    });
                     const tempDivInfo = document.getElementById('temp-div');
+                    const weatherInfoDiv = document.getElementById('weather-info');
                     tempDivInfo.innerHTML = Math.round(temp) + " celcius";
+                    weatherInfoDiv.innerHTML = `
+                        <p><strong>City:</strong> ${data.name}</p>
+                        <p><strong>Condition:</strong> ${condition}</p>
+                        <p><strong>Temperature:</strong> ${Math.round(temp)} C</p>
+                        <p><strong>Humidity:</strong> ${humidity}%</p>
+                        <p><strong>Wind Speed:</strong> ${windSpeed !== null ? windSpeed + ' m/s' : 'N/A'}</p>
+                    `;
                     applyWeatherTheme(data.weather && data.weather[0] ? data.weather[0].main : '');
                     applyTemperatureBackground(temp, city);
                 } catch (error) {
